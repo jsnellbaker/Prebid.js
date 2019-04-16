@@ -1,5 +1,6 @@
 import { deepAccess, getBidRequest, getKeyByValue, insertHtmlIntoIframe, logError, triggerPixel } from './utils';
 import includes from 'core-js/library/fn/array/includes';
+import { config } from './config';
 
 const CONSTANTS = require('./constants.json');
 
@@ -155,7 +156,17 @@ export function fireNativeTrackers(message, adObject) {
 export function getNativeTargeting(bid, bidReq) {
   let keyValues = {};
 
-  Object.keys(bid['native']).forEach(asset => {
+  const sendNativeTargetingKeysFlag = config.getConfig('sendNativeTargetingKeys');
+  const nativeMediaType = deepAccess(bidReq, 'mediaTypes.native');
+  const assetsWithSendTargeting = Object.keys(nativeMediaType || []).filter(asset => nativeMediaType[asset].sendTargeting === true);
+
+  if (sendNativeTargetingKeysFlag === false && assetsWithSendTargeting.length === 0) {
+    return keyValues;
+  }
+
+  let activeAssets = (sendNativeTargetingKeysFlag === false && assetsWithSendTargeting.length > 0) ? assetsWithSendTargeting : Object.keys(bid['native']);
+
+  activeAssets.forEach(asset => {
     const key = CONSTANTS.NATIVE_KEYS[asset];
     let value = getAssetValue(bid['native'][asset]);
 

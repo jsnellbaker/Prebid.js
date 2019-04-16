@@ -1,5 +1,6 @@
 import { expect } from 'chai';
 import { fireNativeTrackers, getNativeTargeting, nativeBidIsValid, getAssetMessage } from 'src/native';
+import { config } from 'src/config';
 import CONSTANTS from 'src/constants.json';
 const utils = require('src/utils');
 
@@ -52,6 +53,7 @@ describe('native.js', function () {
   afterEach(function () {
     utils.triggerPixel.restore();
     utils.insertHtmlIntoIframe.restore();
+    config.resetConfig();
   });
 
   it('gets native targeting keys', function () {
@@ -59,6 +61,88 @@ describe('native.js', function () {
     expect(targeting[CONSTANTS.NATIVE_KEYS.title]).to.equal(bid.native.title);
     expect(targeting[CONSTANTS.NATIVE_KEYS.body]).to.equal(bid.native.body);
     expect(targeting[CONSTANTS.NATIVE_KEYS.clickUrl]).to.equal(bid.native.clickUrl);
+  });
+
+  it('returns no keys if the sendNativeTargetingKeys is false', function () {
+    config.setConfig({
+      sendNativeTargetingKeys: false
+    });
+
+    const nativeBid = {
+      native: {
+        title: 'Native Creative',
+        body: 'Native body',
+        clickUrl: 'https://www.link.example'
+      }
+    };
+    const bidRequest = {
+      mediaTypes: {
+        native: {
+          body: { required: true },
+          title: { required: false },
+          clickUrl: { required: true }
+        }
+      }
+    };
+
+    const targeting = getNativeTargeting(nativeBid, bidRequest);
+    expect(targeting).to.deep.equal({});
+  });
+
+  it('returns only specific keys if sendTargeting was enabled under those assets in the bidRequest', function () {
+    config.setConfig({
+      sendNativeTargetingKeys: false
+    });
+
+    const nativeBid = {
+      native: {
+        title: 'Native Creative',
+        body: 'Native body',
+        clickUrl: 'https://www.link.example'
+      }
+    };
+    const bidRequest = {
+      mediaTypes: {
+        native: {
+          body: { required: true },
+          title: { required: false, sendTargeting: true },
+          clickUrl: { required: true }
+        }
+      }
+    };
+
+    const targeting = getNativeTargeting(nativeBid, bidRequest);
+    expect(Object.keys(targeting)).to.deep.equal(['hb_native_title']);
+    expect(targeting[CONSTANTS.NATIVE_KEYS.title]).to.equal(nativeBid.native.title);
+  });
+
+  it('returns all available native targeting keys if the sendNativeTargetingKeys = true regardless of sendTargeting', function () {
+    config.setConfig({
+      sendNativeTargetingKeys: true
+    });
+
+    const nativeBid = {
+      native: {
+        title: 'Native Creative',
+        body: 'Native body',
+        clickUrl: 'https://www.link.example'
+      }
+    };
+    const bidRequest = {
+      mediaTypes: {
+        native: {
+          body: { required: true },
+          title: { required: false, sendTargeting: true },
+          clickUrl: { required: true }
+        }
+      }
+    };
+
+    const targeting = getNativeTargeting(nativeBid, bidRequest);
+    expect(Object.keys(targeting)).to.deep.equal(['hb_native_title', 'hb_native_body', 'hb_native_linkurl']);
+    expect(targeting[CONSTANTS.NATIVE_KEYS.title]).to.equal(nativeBid.native.title);
+    expect(targeting[CONSTANTS.NATIVE_KEYS.body]).to.equal(nativeBid.native.body);
+    expect(targeting[CONSTANTS.NATIVE_KEYS.clickUrl]).to.equal(nativeBid.native.clickUrl);
   });
 
   it('sends placeholders for configured assets', function () {
