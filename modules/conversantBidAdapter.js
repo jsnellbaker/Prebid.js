@@ -3,8 +3,7 @@ import {registerBidder} from '../src/adapters/bidderFactory';
 import { BANNER, VIDEO } from '../src/mediaTypes';
 
 const BIDDER_CODE = 'conversant';
-const URL = '//web.hb.ad.cpe.dotomi.com/s2s/header/24';
-const VERSION = '2.2.4';
+const URL = 'https://web.hb.ad.cpe.dotomi.com/s2s/header/24';
 
 export const spec = {
   code: BIDDER_CODE,
@@ -24,7 +23,7 @@ export const spec = {
     }
 
     if (!utils.isStr(bid.params.site_id)) {
-      utils.logWarn(BIDDER_CODE + ': site_id must be specified as a string')
+      utils.logWarn(BIDDER_CODE + ': site_id must be specified as a string');
       return false;
     }
 
@@ -45,29 +44,30 @@ export const spec = {
    * Make a server request from the list of BidRequests.
    *
    * @param {BidRequest[]} validBidRequests - an array of bids
+   * @param bidderRequest
    * @return {ServerRequest} Info describing the request to the server.
    */
   buildRequests: function(validBidRequests, bidderRequest) {
-    const loc = utils.getTopWindowLocation();
-    const page = loc.href;
-    const isPageSecure = (loc.protocol === 'https:') ? 1 : 0;
+    const page = (bidderRequest && bidderRequest.refererInfo) ? bidderRequest.refererInfo.referer : '';
     let siteId = '';
     let requestId = '';
     let pubcid = null;
+    let pubcidName = '_pubcid';
 
     const conversantImps = validBidRequests.map(function(bid) {
       const bidfloor = utils.getBidIdParameter('bidfloor', bid.params);
-      const secure = isPageSecure || (utils.getBidIdParameter('secure', bid.params) ? 1 : 0);
 
-      siteId = utils.getBidIdParameter('site_id', bid.params);
+      siteId = utils.getBidIdParameter('site_id', bid.params) || siteId;
+      pubcidName = utils.getBidIdParameter('pubcid_name', bid.params) || pubcidName;
+
       requestId = bid.auctionId;
 
       const imp = {
         id: bid.bidId,
-        secure: secure,
+        secure: 1,
         bidfloor: bidfloor || 0,
         displaymanager: 'Prebid.js',
-        displaymanagerver: VERSION
+        displaymanagerver: '$prebid.version$'
       };
 
       copyOptProperty(bid.params.tag_id, imp, 'tagid');
@@ -135,6 +135,10 @@ export const spec = {
       }
     }
 
+    if (!pubcid) {
+      pubcid = readStoredValue(pubcidName);
+    }
+
     // Add common id if available
     if (pubcid) {
       userExt.fpc = pubcid;
@@ -155,6 +159,7 @@ export const spec = {
    * Unpack the response from the server into a list of bids.
    *
    * @param {*} serverResponse A successful response from the server.
+   * @param bidRequest
    * @return {Bid[]} An array of bids which were nested inside the server.
    */
   interpretResponse: function(serverResponse, bidRequest) {
@@ -250,7 +255,7 @@ function getDevice() {
  *
  * [[300, 250], [300, 600]] => [{w: 300, h: 250}, {w: 300, h: 600}]
  *
- * @param {number[2][]|number[2]} bidSizes - arrays of widths and heights
+ * @param {Array.<Array.<number>>} bidSizes - arrays of widths and heights
  * @returns {object[]} Array of objects with w and h
  */
 function convertSizes(bidSizes) {
@@ -287,6 +292,37 @@ function copyOptProperty(src, dst, dstName) {
   if (src) {
     dst[dstName] = src;
   }
+}
+
+/**
+ * Look for a stored value from both cookie and local storage and return the first value found.
+ * @param key Key for the search
+ * @return {string} Stored value
+ */
+function readStoredValue(key) {
+  let storedValue;
+  try {
+    // check cookies first
+    storedValue = utils.getCookie(key);
+
+    if (!storedValue) {
+      // check expiration time before reading local storage
+      const storedValueExp = utils.getDataFromLocalStorage(`${key}_exp`);
+      if (storedValueExp === '' || (storedValueExp && (new Date(storedValueExp)).getTime() - Date.now() > 0)) {
+        storedValue = utils.getDataFromLocalStorage(key);
+        storedValue = storedValue ? decodeURIComponent(storedValue) : storedValue;
+      }
+    }
+
+    // deserialize JSON if needed
+    if (utils.isStr(storedValue) && storedValue.charAt(0) === '{') {
+      storedValue = JSON.parse(storedValue);
+    }
+  } catch (e) {
+    utils.logError(e);
+  }
+
+  return storedValue;
 }
 
 registerBidder(spec);
