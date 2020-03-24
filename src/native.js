@@ -1,6 +1,6 @@
-import { deepAccess, getBidRequest, getKeyByValue, insertHtmlIntoIframe, logError, triggerPixel } from './utils';
+import { deepAccess, getBidRequest, getKeyByValue, insertHtmlIntoIframe, logError, triggerPixel } from './utils.js';
 import includes from 'core-js/library/fn/array/includes';
-import { config } from './config';
+import { config } from './config.js';
 
 const CONSTANTS = require('./constants.json');
 
