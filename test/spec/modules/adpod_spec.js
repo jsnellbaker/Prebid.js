@@ -1059,7 +1059,7 @@ describe('adpod.js', function () {
         durationBucket: 15
       },
       meta: {
-        iabSubCatId: 'testCategory_123'
+        primaryCatId: 'testCategory_123'
       },
       vastXml: '<VAST>test XML here</VAST>'
     };
@@ -1128,7 +1128,7 @@ describe('adpod.js', function () {
       });
 
       let goodBid = utils.deepClone(adpodTestBid);
-      goodBid.meta.iabSubCatId = undefined;
+      goodBid.meta.primaryCatId = undefined;
       checkVideoBidSetupHook(callbackFn, goodBid, bidderRequestNoExact, {}, ADPOD);
       expect(callbackResult).to.be.null;
       expect(bailResult).to.equal(true);
@@ -1152,7 +1152,7 @@ describe('adpod.js', function () {
       }
 
       let noCatBid = utils.deepClone(adpodTestBid);
-      noCatBid.meta.iabSubCatId = undefined;
+      noCatBid.meta.primaryCatId = undefined;
       testInvalidAdpodBid(noCatBid, false);
 
       let noContextBid = utils.deepClone(adpodTestBid);
@@ -1179,7 +1179,7 @@ describe('adpod.js', function () {
           durationSeconds: 30
         },
         meta: {
-          iabSubCatId: 'testCategory_123'
+          primaryCatId: 'testCategory_123'
         },
         vastXml: '<VAST/>'
       };
