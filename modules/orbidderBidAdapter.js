@@ -1,15 +1,14 @@
-import {detectReferer} from '../src/refererDetection.js';
-import {ajax} from '../src/ajax.js';
 import {registerBidder} from '../src/adapters/bidderFactory.js';
-import * as utils from '../src/utils.js';
+import { getStorageManager } from '../src/storageManager.js';
+
+const storage = getStorageManager();
 
 export const spec = {
   code: 'orbidder',
-  bidParams: {},
   orbidderHost: (() => {
     let ret = 'https://orbidder.otto.de';
     try {
-      ret = utils.getDataFromLocalStorage('ov_orbidder_host') || ret;
+      ret = storage.getDataFromLocalStorage('ov_orbidder_host') || ret;
     } catch (e) {
     }
     return ret;
@@ -46,7 +45,6 @@ export const spec = {
           params: bidRequest.params
         }
       };
-      spec.bidParams[bidRequest.bidId] = bidRequest.params;
       if (bidderRequest && bidderRequest.gdprConsent) {
         ret.data.gdprConsent = {
           consentString: bidderRequest.gdprConsent.consentString,
@@ -74,21 +72,6 @@ export const spec = {
     }
     return bidResponses;
   },
-
-  onBidWon(bid) {
-    const getRefererInfo = detectReferer(window);
-
-    bid.v = $$PREBID_GLOBAL$$.version;
-    bid.pageUrl = getRefererInfo().referer;
-    if (spec.bidParams[bid.requestId] && (typeof bid.params === 'undefined')) {
-      bid.params = [spec.bidParams[bid.requestId]];
-    }
-    spec.ajaxCall(`${spec.orbidderHost}/win`, JSON.stringify(bid));
-  },
-
-  ajaxCall(endpoint, data) {
-    ajax(endpoint, null, data, { withCredentials: true });
-  }
 };
 
 registerBidder(spec);
